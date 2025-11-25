@@ -1,20 +1,28 @@
-name: Deploy
+name: Deploy to GitHub Pages
 
 on:
   push:
     branches:
       - prd
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Build & Deploy
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -25,11 +33,25 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Build web bundle
+      - name: Build web
         run: flutter build web --release
 
-      # TODO: Replace this placeholder with your actual deploy command
-      - name: Deploy to production
-        run: |
-          echo "Add your deployment command here (e.g., Firebase, S3, etc.)"
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
